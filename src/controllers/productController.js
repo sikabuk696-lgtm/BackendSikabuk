@@ -157,7 +157,7 @@ async function updateProduct(req, res) {
     const updates    = req.body;
 
     if (role === 'worker') {
-      // Snapshot current name for the approval UI
+      // Snapshot current product so we can show before/after in the approval UI
       const current = await productService.getProductById(businessId, id);
       const result = await pendingService.createPendingChange({
         businessId,
@@ -167,7 +167,10 @@ async function updateProduct(req, res) {
         action:      'update',
         entityId:    id,
         entityName:  current.product?.name || id,
-        payload:     updates,
+        payload:     {
+          ...updates,
+          previous_quantity: current.product?.quantity ?? 0,
+        },
       });
       return res.status(202).json({
         success: true,
