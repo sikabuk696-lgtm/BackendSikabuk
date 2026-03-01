@@ -165,10 +165,44 @@ async function rejectChange(businessId, ownerId, changeId, reason) {
   return { success: true, change: data };
 }
 
+/**
+ * Approve ALL pending changes for a business in one shot.
+ * Processes them sequentially so each one's DB mutation completes before the next.
+ * Returns counts of how many succeeded and how many failed.
+ */
+async function approveAll(businessId, ownerId) {
+  const { data: pending, error } = await supabase
+    .from('pending_changes')
+    .select('id')
+    .eq('business_id', businessId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  if (!pending || pending.length === 0) return { success: true, approved: 0, failed: 0 };
+
+  let approved = 0;
+  let failed = 0;
+  const errors = [];
+
+  for (const row of pending) {
+    try {
+      await approveChange(businessId, ownerId, row.id);
+      approved++;
+    } catch (err) {
+      failed++;
+      errors.push({ id: row.id, message: err.message || 'Unknown error' });
+    }
+  }
+
+  return { success: true, approved, failed, errors };
+}
+
 module.exports = {
   createPendingChange,
   listPendingChanges,
   countPending,
   approveChange,
   rejectChange,
+  approveAll,
 };

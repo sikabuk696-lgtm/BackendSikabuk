@@ -81,4 +81,20 @@ async function reject(req, res) {
   }
 }
 
-module.exports = { list, count, approve, reject, myChanges };
+/**
+ * POST /api/pending/approve-all
+ * Approve every pending change for this business in one request.
+ */
+async function approveAll(req, res) {
+  try {
+    const result = await pendingService.approveAll(req.businessId, req.workerId);
+    const msg = result.failed > 0
+      ? `Approved ${result.approved}, failed ${result.failed}`
+      : `All ${result.approved} change${result.approved !== 1 ? 's' : ''} approved`;
+    res.json({ success: true, message: msg, ...result });
+  } catch (err) {
+    res.status(err.status || 500).json({ success: false, message: safeMessage(err, 'Approve-all failed') });
+  }
+}
+
+module.exports = { list, count, approve, reject, myChanges, approveAll };

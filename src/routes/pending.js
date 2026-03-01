@@ -15,6 +15,9 @@ router.get('/mine', pendingController.myChanges);
 // All routes below are owner-only
 router.use(ownerOnly);
 
+// POST /api/pending/approve-all — approve every pending change at once
+router.post('/approve-all', pendingController.approveAll);
+
 // GET /api/pending          — list changes (default: status=pending)
 router.get('/', pendingController.list);
 
