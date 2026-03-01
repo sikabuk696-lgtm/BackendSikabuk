@@ -81,4 +81,4 @@ async function reject(req, res) {
   }
 }
 
-module.exports = { list, count, approve, reject };
+module.exports = { list, count, approve, reject, myChanges };
