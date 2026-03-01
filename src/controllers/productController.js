@@ -246,6 +246,9 @@ async function adjustQuantity(req, res) {
 
     if (role === 'worker') {
       const current = await productService.getProductById(businessId, id);
+      const previousQty = current.product?.quantity ?? 0;
+      const changeInt   = parseInt(change, 10);
+      const totalQty    = Math.max(0, previousQty + changeInt);
       const result = await pendingService.createPendingChange({
         businessId,
         workerId,
@@ -254,7 +257,7 @@ async function adjustQuantity(req, res) {
         action:      'stock',
         entityId:    id,
         entityName:  current.product?.name || id,
-        payload:     { change: parseInt(change, 10) },
+        payload:     { change: changeInt, previous_quantity: previousQty, total_quantity: totalQty },
       });
       return res.status(202).json({
         success: true,
