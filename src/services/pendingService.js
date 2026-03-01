@@ -58,7 +58,7 @@ async function listPendingChanges(businessId, opts = {}) {
 
   if (status) query = query.eq('status', status);
   if (entityType) query = query.eq('entity_type', entityType);
-
+    if (workerId)    query = query.eq('worker_id', workerId);
   const { data, error } = await query;
   if (error) throw error;
   return { success: true, changes: data, count: data.length };

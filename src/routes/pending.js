@@ -5,8 +5,14 @@ const { authenticate } = require('../middleware/auth');
 const { ownerOnly } = require('../middleware/permissions');
 const { validateParam } = require('../middleware/validateUUID');
 
-// All pending routes require authentication + owner role
+// All pending routes require authentication
 router.use(authenticate);
+
+// GET /api/pending/mine — worker fetches their own pending product/customer submissions
+// Must be registered BEFORE ownerOnly middleware so workers can call it
+router.get('/mine', pendingController.myChanges);
+
+// All routes below are owner-only
 router.use(ownerOnly);
 
 // GET /api/pending          — list changes (default: status=pending)

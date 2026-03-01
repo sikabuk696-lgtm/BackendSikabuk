@@ -7,6 +7,25 @@ const { safeMessage } = require('../utils/errors');
  */
 
 /**
+ * GET /api/pending/mine
+ * Worker fetches their own pending submissions (any status).
+ * Filtered by entity_type=product by default; pass ?entityType=customer etc.
+ */
+async function myChanges(req, res) {
+  try {
+    const { entityType, status } = req.query;
+    const result = await pendingService.listPendingChanges(req.businessId, {
+      status:     status || 'pending',
+      entityType: entityType || null,
+      workerId:   req.workerId,   // restrict to this worker only
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ success: false, message: safeMessage(err, 'Failed to load your submissions') });
+  }
+}
+
+/**
  * GET /api/pending
  * List pending (or historical) changes for the business.
  * Query: ?status=pending|approved|rejected  &entityType=product|customer
