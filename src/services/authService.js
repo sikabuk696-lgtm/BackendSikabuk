@@ -226,10 +226,11 @@ class AuthService {
 
     } else {
       // ── NEW USER - REGISTRATION ──
-      
-      // Business name is REQUIRED for new registration
+
+      // If no business name was provided, this is a login attempt from a
+      // Google account that has never registered — block it with a clear message.
       if (!business_name || business_name.trim().length < 2) {
-        throw { status: 400, message: 'Company name is required to create a new account (minimum 2 characters)' };
+        throw { status: 404, message: 'No SikaBuk account found for this Google account. Please register your business first.' };
       }
 
       isNewBusiness = true;
