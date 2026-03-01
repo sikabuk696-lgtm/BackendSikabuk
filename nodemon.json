@@ -1,0 +1,23 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": [
+    "node_modules",
+    "*.test.js",
+    "*.spec.js",
+    ".git"
+  ],
+  "delay": 1000,
+  "verbose": false,
+  "execMap": {
+    "js": "node"
+  },
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "events": {
+    "restart": "echo '🔄 Server restarting...'",
+    "start": "echo '✅ Server started successfully'",
+    "crash": "echo '❌ Server crashed - waiting for changes...'"
+  }
+}

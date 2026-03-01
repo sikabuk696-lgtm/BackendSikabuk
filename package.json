@@ -1,0 +1,41 @@
+{
+  "name": "sikabuk-backend",
+  "version": "1.0.0",
+  "description": "Multi-tenant business management API for SikaBuk",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --disable-warning=DEP0040 src/index.js",
+    "predev": "npx kill-port 5000",
+    "dev": "nodemon --exec \"node --disable-warning=DEP0040\" src/index.js",
+    "dev:debug": "nodemon --inspect src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "business",
+    "management",
+    "multi-tenant",
+    "saas"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.13.5",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.0.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.2.2"
+  }
+}
