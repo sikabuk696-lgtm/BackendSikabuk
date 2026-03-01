@@ -48,7 +48,7 @@ async function createPendingChange({
  * @param {object} opts - { status: 'pending'|'approved'|'rejected', entityType }
  */
 async function listPendingChanges(businessId, opts = {}) {
-  const { status = 'pending', entityType } = opts;
+  const { status = 'pending', entityType, workerId } = opts;
 
   let query = supabase
     .from('pending_changes')
