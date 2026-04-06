@@ -13,6 +13,7 @@ const productUploadRoutes = require('./routes/productUpload');
 const locationsRoutes = require('./routes/locations');
 const pendingRoutes = require('./routes/pending');
 const { globalErrorHandler } = require('./utils/errors');
+const { sanitizeRequest } = require('./middleware/sanitize');
 
 const app = express();
 
@@ -59,6 +60,9 @@ app.options('*', cors(corsOptions));
 // ── Body parsing with explicit size limits
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+// ── Global input sanitization (prototype pollution, null bytes, control chars)
+app.use(sanitizeRequest);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

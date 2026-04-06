@@ -151,7 +151,7 @@ class AuthService {
    * @param {string} business_name - Business name (ONLY for new registration)
    * @returns {Object} Business account and auth token
    */
-  async verifySupabaseToken({ accessToken, business_name, timezone }) {
+  async verifySupabaseToken({ accessToken, business_name, timezone, whatsapp_phone }) {
     if (!accessToken) {
       throw { status: 400, message: 'Supabase access token is required' };
     }
@@ -225,6 +225,65 @@ class AuthService {
         .eq('id', worker.id);
 
     } else {
+      // ── NOT AN OWNER — check if this email belongs to a co-founder worker ──
+      const { data: cofounderWorker } = await supabase
+        .from('workers')
+        .select('id, business_id, worker_name, role, pin_hash, is_active')
+        .eq('email', email)
+        .eq('role', 'cofounder')
+        .eq('is_active', true)
+        .single();
+
+      if (cofounderWorker) {
+        // ── CO-FOUNDER LOGIN ──
+        const { data: cofounderBusiness } = await supabase
+          .from('business_accounts')
+          .select('id, business_name, short_code, is_active, owner_phone, timezone')
+          .eq('id', cofounderWorker.business_id)
+          .single();
+
+        if (!cofounderBusiness || !cofounderBusiness.is_active) {
+          throw { status: 403, message: 'Business account is not active.' };
+        }
+
+        business = cofounderBusiness;
+        worker   = cofounderWorker;
+
+        // Update last login
+        await supabase
+          .from('workers')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('id', worker.id);
+
+        // Co-founder PIN is stored in workers.pin_hash
+        const cofPinHash   = worker.pin_hash || null;
+        const cofPinStatus = cofPinHash ? 'verify_required' : 'setup_required';
+
+        const tempToken = this.generateTempToken({
+          businessId: business.id,
+          workerId:   worker.id,
+          role:       worker.role,
+          workerName: worker.worker_name,
+        });
+
+        return {
+          success:       true,
+          isNewBusiness: false,
+          pinStatus:     cofPinStatus,
+          tempToken,
+          business: {
+            id:            business.id,
+            short_code:    business.short_code,
+            business_name: business.business_name,
+          },
+          worker: {
+            id:   worker.id,
+            name: worker.worker_name,
+            role: worker.role,
+          },
+        };
+      }
+
       // ── NEW USER - REGISTRATION ──
 
       // If no business name was provided, this is a login attempt from a
@@ -239,15 +298,24 @@ class AuthService {
       const shortCode = await this.generateShortCode();
 
       // Create business account (store owner email in `owner_email`)
+      const insertBiz = {
+        business_name: business_name.trim(),
+        owner_email: email, // store owner's email in dedicated column
+        short_code: shortCode,
+        is_active: true,
+        timezone: timezone || 'UTC',
+      };
+
+      // Optionally store WhatsApp number for notifications
+      if (whatsapp_phone) {
+        let cleaned = whatsapp_phone.replace(/[\s\-+]/g, '');
+        if (cleaned.startsWith('0')) cleaned = '233' + cleaned.substring(1);
+        if (/^\d{10,15}$/.test(cleaned)) insertBiz.owner_phone = cleaned;
+      }
+
       const { data: newBusiness, error: businessError } = await supabase
         .from('business_accounts')
-        .insert([{
-          business_name: business_name.trim(),
-          owner_email: email, // store owner's email in dedicated column
-          short_code: shortCode,
-          is_active: true,
-          timezone: timezone || 'UTC'
-        }])
+        .insert([insertBiz])
         .select('id, business_name, short_code, timezone')
         .single();
 
@@ -294,11 +362,9 @@ class AuthService {
     }
 
     // ── Security PIN gate (applies to all Google OAuth owners) ──────
-    // If a PIN is already set, require verification before issuing a full JWT.
-    // If no PIN is set (first login or new account), require setup.
-    // Either way we issue a short-lived 'pin_pending' temp token; the full
-    // JWT is only generated after pin setup or verification.
-    const pinHash = business.owner_security_pin_hash || null;
+    // For co-founders, PIN hash lives in workers.pin_hash (handled above in
+    // the co-founder branch). This block only runs for the business owner.
+    const pinHash   = business.owner_security_pin_hash || null;
     const pinStatus = pinHash ? 'verify_required' : 'setup_required';
 
     const tempToken = this.generateTempToken({
@@ -352,13 +418,14 @@ class AuthService {
       throw { status: 404, message: 'Business not found. Check the code and try again.' };
     }
 
-    // Get all active workers for this business (exclude owner)
+    // Get all active workers for this business (exclude owner and cofounder — they use Google OAuth)
     const { data: workers, error: workersError } = await supabase
       .from('workers')
       .select('id, business_id, worker_name, role, pin_hash, is_active')
       .eq('business_id', business.id)
       .eq('is_active', true)
-      .neq('role', 'owner'); // Workers only, not owner
+      .neq('role', 'owner')
+      .neq('role', 'cofounder'); // Co-founders must log in via Google OAuth
 
     if (workersError || !workers || workers.length === 0) {
       throw { status: 401, message: 'No workers found for this business' };
@@ -440,12 +507,21 @@ class AuthService {
 
     const pinHash = await bcrypt.hash(newPin, SALT_ROUNDS);
 
-    const { error } = await supabase
-      .from('business_accounts')
-      .update({ owner_security_pin_hash: pinHash })
-      .eq('id', decoded.businessId);
-
-    if (error) throw { status: 500, message: 'Failed to save PIN' };
+    if (decoded.role === 'cofounder') {
+      // Co-founder PIN stored in workers.pin_hash
+      const { error } = await supabase
+        .from('workers')
+        .update({ pin_hash: pinHash })
+        .eq('id', decoded.workerId);
+      if (error) throw { status: 500, message: 'Failed to save PIN' };
+    } else {
+      // Owner PIN stored in business_accounts.owner_security_pin_hash
+      const { error } = await supabase
+        .from('business_accounts')
+        .update({ owner_security_pin_hash: pinHash })
+        .eq('id', decoded.businessId);
+      if (error) throw { status: 500, message: 'Failed to save PIN' };
+    }
 
     // Issue full JWT
     const token = this.generateToken({
@@ -476,19 +552,31 @@ class AuthService {
       throw { status: 403, message: 'Invalid token type for PIN verification' };
     }
 
-    // Load PIN hash
-    const { data: biz, error } = await supabase
-      .from('business_accounts')
-      .select('owner_security_pin_hash')
-      .eq('id', decoded.businessId)
-      .single();
-
-    if (error || !biz) throw { status: 404, message: 'Business account not found' };
-    if (!biz.owner_security_pin_hash) {
-      throw { status: 400, message: 'No PIN set. Please set up your PIN first.' };
+    // Load PIN hash — co-founders use workers.pin_hash; owners use business_accounts
+    let storedPinHash;
+    if (decoded.role === 'cofounder') {
+      const { data: wrkr, error: wErr } = await supabase
+        .from('workers')
+        .select('pin_hash')
+        .eq('id', decoded.workerId)
+        .single();
+      if (wErr || !wrkr) throw { status: 404, message: 'Worker account not found' };
+      if (!wrkr.pin_hash) throw { status: 400, message: 'No PIN set. Please set up your PIN first.' };
+      storedPinHash = wrkr.pin_hash;
+    } else {
+      const { data: biz, error } = await supabase
+        .from('business_accounts')
+        .select('owner_security_pin_hash')
+        .eq('id', decoded.businessId)
+        .single();
+      if (error || !biz) throw { status: 404, message: 'Business account not found' };
+      if (!biz.owner_security_pin_hash) {
+        throw { status: 400, message: 'No PIN set. Please set up your PIN first.' };
+      }
+      storedPinHash = biz.owner_security_pin_hash;
     }
 
-    const valid = await bcrypt.compare(pin, biz.owner_security_pin_hash);
+    const valid = await bcrypt.compare(pin, storedPinHash);
     if (!valid) throw { status: 401, message: 'Incorrect PIN. Please try again.' };
 
     // Issue full JWT

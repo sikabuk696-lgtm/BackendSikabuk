@@ -2,6 +2,14 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const rateLimit = require('express-rate-limit');
+const { authenticate } = require('../middleware/auth');
+const { ownerOnly } = require('../middleware/permissions');
+const {
+  validateRegister,
+  validateWorkerLogin,
+  validateOwnerPin,
+  validateUpdatePhone,
+} = require('../middleware/validate');
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 
@@ -38,21 +46,24 @@ const verifyLimiter = rateLimit({
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 // Business Registration - Create new business account
-router.post('/register', authFlowLimiter, authController.registerBusiness);
+router.post('/register', authFlowLimiter, validateRegister, authController.registerBusiness);
 
 // Owner: Verify Supabase access token (registration or login)
 router.post('/supabase-auth', authFlowLimiter, authController.supabaseAuth);
 
 // Worker: Login with PIN (strict rate limiting)
-router.post('/worker-login', workerLoginLimiter, authController.workerLogin);
+router.post('/worker-login', workerLoginLimiter, validateWorkerLogin, authController.workerLogin);
 
 // Owner: Set security PIN (exchanges temp token for full JWT)
-router.post('/owner-pin/setup', authFlowLimiter, authController.setupOwnerPin);
+router.post('/owner-pin/setup', authFlowLimiter, validateOwnerPin, authController.setupOwnerPin);
 
 // Owner: Verify security PIN (exchanges temp token for full JWT)
-router.post('/owner-pin/verify', workerLoginLimiter, authController.verifyOwnerPin);
+router.post('/owner-pin/verify', workerLoginLimiter, validateOwnerPin, authController.verifyOwnerPin);
 
 // Verify JWT token (for protected routes)
 router.get('/verify', verifyLimiter, authController.verifyToken);
+
+// Owner/Co-founder: Update WhatsApp phone number for notifications
+router.patch('/phone', authFlowLimiter, authenticate, ownerOnly, validateUpdatePhone, authController.updateOwnerPhone);
 
 module.exports = router;

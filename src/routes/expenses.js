@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const expenseController = require('../controllers/expenseController');
 const { authenticate } = require('../middleware/auth');
-const { ownerOnly } = require('../middleware/permissions');
+const { canManageExpenses } = require('../middleware/permissions');
 const { validateParam } = require('../middleware/validateUUID');
 
 /**
@@ -14,7 +14,7 @@ const { validateParam } = require('../middleware/validateUUID');
 
 // Apply authentication middleware to all expense routes
 router.use(authenticate);
-router.use(ownerOnly);
+router.use(canManageExpenses);
 
 // GET /api/expenses - Get all expenses (with optional filters)
 router.get('/', expenseController.getAllExpenses);

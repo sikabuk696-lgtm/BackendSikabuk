@@ -4,6 +4,8 @@ const { supabase } = require('../config/database');
 const SALT_ROUNDS = 10;
 const PIN_REGEX = /^\d{4}$/;
 
+const VALID_ROLES = ['worker', 'cashier', 'stock_manager', 'manager', 'accountant', 'cofounder'];
+
 /**
  * Worker Management Service
  * Allows business owner to manage employees (cashiers, stock managers, etc.)
@@ -11,53 +13,76 @@ const PIN_REGEX = /^\d{4}$/;
 class WorkerService {
   /**
    * Add a new worker to the business
-   * @param {string} business_id - Business UUID
-   * @param {string} worker_name - Worker's name
-   * @param {string} pin - 4-digit PIN for worker login
+   * @param {string} business_id  - Business UUID
+   * @param {string} worker_name  - Worker's name
+   * @param {string} [pin]        - 4-digit PIN (not required for co-founders)
+   * @param {string} [role]       - One of VALID_ROLES (defaults to 'worker')
+   * @param {string} [email]      - Email address (required for co-founders)
+   * @param {string} [location_id]- Optional assigned shop UUID
    */
-  async addWorker({ business_id, worker_name, pin, location_id = null }) {
+  async addWorker({ business_id, worker_name, pin, role = 'worker', email = null, location_id = null }) {
+    // Validate role
+    if (!VALID_ROLES.includes(role)) {
+      throw { status: 400, message: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` };
+    }
+
     // Validate inputs
-    if (!business_id || !worker_name || !pin) {
-      throw { status: 400, message: 'Business ID, worker name, and PIN are required' };
+    if (!business_id || !worker_name) {
+      throw { status: 400, message: 'Business ID and worker name are required' };
     }
 
     if (worker_name.length < 2) {
       throw { status: 400, message: 'Worker name must be at least 2 characters' };
     }
 
-    if (!PIN_REGEX.test(pin)) {
-      throw { status: 400, message: 'PIN must be exactly 4 digits' };
+    // Co-founders log in via Google OAuth — PIN is set post-login, email required
+    if (role === 'cofounder') {
+      if (!email || !email.includes('@')) {
+        throw { status: 400, message: 'Email is required for co-founders (they log in with Google)' };
+      }
+    } else {
+      // All other roles require a PIN
+      if (!pin) throw { status: 400, message: 'PIN is required' };
+      if (!PIN_REGEX.test(pin)) throw { status: 400, message: 'PIN must be exactly 4 digits' };
     }
 
-    // Hash the PIN
-    const pin_hash = await bcrypt.hash(pin, SALT_ROUNDS);
+    // Hash the PIN (null for co-founders — they'll set it after first OAuth login)
+    let pin_hash = null;
+    if (pin) pin_hash = await bcrypt.hash(pin, SALT_ROUNDS);
 
-    // Create worker with 'worker' role and optional single assigned location
+    // Create worker
+    const insertData = {
+      business_id,
+      worker_name,
+      role,
+      pin_hash,
+      is_active: true,
+      location_id,
+    };
+    if (email) insertData.email = email.toLowerCase().trim();
+
     const { data: newWorker, error } = await supabase
       .from('workers')
-      .insert([{
-        business_id,
-        worker_name,
-        role: 'worker',
-        pin_hash,
-        is_active: true,
-        location_id
-      }])
-      .select('id, business_id, worker_name, role, is_active, location_id, created_at')
+      .insert([insertData])
+      .select('id, business_id, worker_name, role, email, is_active, location_id, created_at')
       .single();
 
     if (error) {
       console.error('Worker creation error:', error);
+      if (error.code === '23505') {
+        throw { status: 409, message: 'A co-founder with that email already exists in this business.' };
+      }
       throw { status: 500, message: 'Failed to add worker. Please try again.' };
     }
 
     return {
       worker: {
-        id: newWorker.id,
-        worker_name: newWorker.worker_name,
-        role: newWorker.role,
-        is_active: newWorker.is_active,
-        created_at: newWorker.created_at
+        id:         newWorker.id,
+        worker_name:newWorker.worker_name,
+        role:       newWorker.role,
+        email:      newWorker.email || null,
+        is_active:  newWorker.is_active,
+        created_at: newWorker.created_at,
       }
     };
   }

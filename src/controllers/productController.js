@@ -115,7 +115,7 @@ async function createProduct(req, res) {
     const role       = req.role;
     const productData = req.body;
 
-    if (role === 'worker') {
+    if (!['owner', 'cofounder'].includes(role)) {
       const result = await pendingService.createPendingChange({
         businessId,
         workerId,
@@ -156,7 +156,7 @@ async function updateProduct(req, res) {
     const { id }     = req.params;
     const updates    = req.body;
 
-    if (role === 'worker') {
+    if (!['owner', 'cofounder'].includes(role)) {
       // Snapshot current product so we can show before/after in the approval UI
       const current = await productService.getProductById(businessId, id);
       const result = await pendingService.createPendingChange({
@@ -167,7 +167,7 @@ async function updateProduct(req, res) {
         action:      'update',
         entityId:    id,
         entityName:  current.product?.name || id,
-        payload:     {
+        payload: {
           ...updates,
           previous_quantity: current.product?.quantity ?? 0,
         },
@@ -201,7 +201,7 @@ async function deleteProduct(req, res) {
     const role       = req.role;
     const { id }     = req.params;
 
-    if (role === 'worker') {
+    if (!['owner', 'cofounder'].includes(role)) {
       const current = await productService.getProductById(businessId, id);
       const result = await pendingService.createPendingChange({
         businessId,
@@ -247,7 +247,7 @@ async function adjustQuantity(req, res) {
       return res.status(400).json({ success: false, error: 'Invalid quantity change value' });
     }
 
-    if (role === 'worker') {
+    if (!['owner', 'cofounder'].includes(role)) {
       const current = await productService.getProductById(businessId, id);
       const previousQty = current.product?.quantity ?? 0;
       const changeInt   = parseInt(change, 10);

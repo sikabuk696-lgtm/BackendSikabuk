@@ -14,14 +14,16 @@ class WorkerController {
    */
   async addWorker(req, res) {
     try {
-      const { worker_name, pin, location_id } = req.body;
+      const { worker_name, pin, location_id, role, email } = req.body;
       const business_id = req.businessId; // From auth middleware
       
       const result = await workerService.addWorker({ 
         business_id,
         worker_name, 
         pin,
-        location_id
+        location_id,
+        role,
+        email,
       });
 
       res.status(201).json({

@@ -116,8 +116,8 @@ async function createCustomer(req, res) {
     const role         = req.role;
     const customerData = req.body;
 
-    if (role === 'worker') {
-      // Any customer addition by a worker needs owner approval
+    if (!['owner', 'cofounder'].includes(role)) {
+      // Any customer addition by a non-privileged worker needs owner approval
       const result = await pendingService.createPendingChange({
         businessId,
         workerId,
@@ -158,7 +158,7 @@ async function updateCustomer(req, res) {
     const { id }     = req.params;
     const updates    = req.body;
 
-    if (role === 'worker') {
+    if (!['owner', 'cofounder'].includes(role)) {
       // Get current customer name for the approval UI
       const current = await customerService.getCustomerById(businessId, id);
       const result = await pendingService.createPendingChange({

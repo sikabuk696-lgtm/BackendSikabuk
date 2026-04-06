@@ -62,12 +62,13 @@ class AuthController {
       console.log('[AuthController] supabaseAuth called');
     }
     try {
-      const { accessToken, business_name, timezone } = req.body;
+      const { accessToken, business_name, timezone, whatsapp_phone } = req.body;
     
       const result = await authService.verifySupabaseToken({ 
         accessToken, 
         business_name,
-        timezone
+        timezone,
+        whatsapp_phone,
       });
       if (process.env.NODE_ENV === 'development') {
         console.log('[AuthController] supabaseAuth completed in', Date.now() - start, 'ms, isNewBusiness=', result?.isNewBusiness);
@@ -241,6 +242,43 @@ class AuthController {
         success: false,
         message: error.message || 'Invalid token'
       });
+    }
+  }
+
+  /**
+   * Update owner WhatsApp phone number (used for notifications).
+   * PATCH /api/auth/phone
+   * Auth: owner / cofounder only
+   * Body: { phone }
+   */
+  async updateOwnerPhone(req, res) {
+    try {
+      const { phone } = req.body;
+      const businessId = req.businessId;
+
+      if (!phone || typeof phone !== 'string') {
+        return res.status(400).json({ success: false, message: 'Phone number is required' });
+      }
+
+      // Basic Ghanaian phone validation
+      const cleaned = phone.replace(/[\s\-+]/g, '');
+      if (!/^\d{10,15}$/.test(cleaned)) {
+        return res.status(400).json({ success: false, message: 'Enter a valid Ghanaian phone number (e.g. 0201234567)' });
+      }
+
+      const normalized = cleaned.startsWith('0') ? '233' + cleaned.substring(1) : cleaned;
+
+      const { supabase } = require('../config/database');
+      const { error } = await supabase
+        .from('business_accounts')
+        .update({ owner_phone: normalized })
+        .eq('id', businessId);
+
+      if (error) return res.status(500).json({ success: false, message: 'Failed to update phone' });
+
+      return res.status(200).json({ success: true, message: 'WhatsApp number updated', phone: normalized });
+    } catch (error) {
+      res.status(error.status || 500).json({ success: false, message: safeMessage(error, 'Failed to update phone') });
     }
   }
 }

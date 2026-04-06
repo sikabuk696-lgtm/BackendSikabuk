@@ -33,6 +33,13 @@ const config = {
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
   },
+
+  // WhatsApp notifications via Hubtel (optional — fails gracefully if absent)
+  whatsapp: {
+    apiKey:       process.env.HUBTEL_WHATSAPP_API_KEY,
+    clientSecret: process.env.HUBTEL_WHATSAPP_CLIENT_SECRET,
+    senderId:     process.env.HUBTEL_WHATSAPP_SENDER_ID || 'SikaBuk',
+  },
   
   // CORS (auto-selects based on NODE_ENV)
   frontendUrl: isDev ? process.env.FRONTEND_URL_DEV : process.env.FRONTEND_URL_PROD,

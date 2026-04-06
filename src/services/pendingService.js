@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const { notifyOwner, pendingSubmissionMsg } = require('./notificationService');
 
 /**
  * Pending Changes Service
@@ -39,6 +40,10 @@ async function createPendingChange({
     .single();
 
   if (error) throw error;
+
+  // Notify owner via WhatsApp (fire-and-forget — never blocks the response)
+  notifyOwner(businessId, pendingSubmissionMsg(workerName || 'A worker', entityType, action)).catch(() => {});
+
   return { success: true, change: data };
 }
 
