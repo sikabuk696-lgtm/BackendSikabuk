@@ -179,8 +179,6 @@ class WorkerService {
       throw { status: 400, message: 'No valid updates provided' };
     }
 
-    updateData.updated_at = new Date().toISOString();
-
     // Update worker
     const { data: updatedWorker, error: updateError } = await supabase
       .from('workers')

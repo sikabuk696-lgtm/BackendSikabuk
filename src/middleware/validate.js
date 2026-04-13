@@ -91,11 +91,11 @@ const validateRegister = [
  * Worker PIN login.
  */
 const validateWorkerLogin = [
-  body('shortCode')
-    .isString().withMessage('shortCode must be a string')
-    .trim().notEmpty().withMessage('shortCode is required')
-    .isLength({ max: 20 }).withMessage('shortCode is too long')
-    .matches(/^\d+$/).withMessage('shortCode must contain only digits'),
+  body('business_code')
+    .isString().withMessage('business_code must be a string')
+    .trim().notEmpty().withMessage('business_code is required')
+    .isLength({ max: 20 }).withMessage('business_code is too long')
+    .matches(/^\d+$/).withMessage('business_code must contain only digits'),
 
   body('pin')
     .isString().withMessage('pin must be a string')
