@@ -45,7 +45,8 @@ const corsOptions = {
       if (config.isDevelopment) return callback(null, true);
       return callback(new Error('Origin header required'));
     }
-    if (origin === config.frontendUrl) return callback(null, true);
+    const allowed = [config.frontendUrl, config.frontendUrl?.replace('https://', 'https://www.')];
+    if (allowed.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   credentials: true,
