@@ -73,4 +73,40 @@ async function notifyOwner(businessId, message) {
   }
 }
 
-module.exports = { notifyOwner, pendingSubmissionMsg, cofounderActionMsg };
+/**
+ * Create an in-app notification record in the notifications table.
+ * Fires silently — never throws, never blocks the calling request.
+ *
+ * @param {string} businessId
+ * @param {string} actorId      - workerId of the person who performed the action
+ * @param {string} actorName    - display name
+ * @param {string} actorRole    - 'owner' | 'cofounder' | 'worker'
+ * @param {string} type         - e.g. 'sale_created', 'product_added'
+ * @param {string} title        - short heading shown in the notification bell
+ * @param {string} message      - full human-readable description
+ * @param {string} entityType   - 'sale' | 'product' | 'expense' | 'customer' | 'worker'
+ * @param {string|null} entityId - UUID of the affected entity (optional)
+ */
+async function createNotification(
+  businessId, actorId, actorName, actorRole,
+  type, title, message, entityType, entityId = null
+) {
+  try {
+    await supabase.from('notifications').insert({
+      business_id: businessId,
+      actor_id:    actorId,
+      actor_name:  actorName,
+      actor_role:  actorRole,
+      type,
+      title,
+      message,
+      entity_type: entityType,
+      entity_id:   entityId || null,
+      read_by:     [],
+    });
+  } catch (err) {
+    console.error('[createNotification] Failed silently:', err?.message || err);
+  }
+}
+
+module.exports = { notifyOwner, pendingSubmissionMsg, cofounderActionMsg, createNotification };

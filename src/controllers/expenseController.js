@@ -1,4 +1,5 @@
 const expenseService = require('../services/expenseService');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Expense Controller
@@ -125,6 +126,13 @@ async function createExpense(req, res) {
       });
     }
 
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'expense_added',
+      'Expense Added',
+      `${req.workerName} recorded expense '${result.expense.description || 'Expense'}' \u2014 GH\u20B5${parseFloat(result.expense.amount || 0).toFixed(2)}`,
+      'expense', result.expense.id
+    );
     return res.status(201).json({
       success: true,
       expense: result.expense,

@@ -12,6 +12,7 @@ const analyticsRoutes = require('./routes/analytics');
 const productUploadRoutes = require('./routes/productUpload');
 const locationsRoutes = require('./routes/locations');
 const pendingRoutes = require('./routes/pending');
+const notificationsRoutes = require('./routes/notifications');
 const { globalErrorHandler } = require('./utils/errors');
 const { sanitizeRequest } = require('./middleware/sanitize');
 
@@ -91,6 +92,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/locations', locationsRoutes);
 app.use('/api/pending', pendingRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -1,4 +1,5 @@
 const salesService = require('../services/salesService');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Sales Controller
@@ -133,6 +134,13 @@ async function createSale(req, res) {
       });
     }
 
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'sale_created',
+      'New Sale Recorded',
+      `${req.workerName} recorded a new sale of GH\u20B5${parseFloat(result.sale.total_amount).toFixed(2)}`,
+      'sale', result.sale.id
+    );
     return res.status(201).json({
       success: true,
       sale: result.sale,

@@ -1,5 +1,6 @@
 const customerService = require('../services/customerService');
 const pendingService  = require('../services/pendingService');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Customer Controller
@@ -128,6 +129,13 @@ async function createCustomer(req, res) {
         entityName:  customerData.name || 'New Customer',
         payload:     customerData,
       });
+      createNotification(
+        businessId, workerId, req.workerName, role,
+        'customer_pending',
+        'New Customer Awaiting Approval',
+        `${req.workerName} submitted customer '${customerData.name || 'a new customer'}' for approval`,
+        'customer', null
+      );
       return res.status(202).json({
         success: true,
         pending: true,
@@ -138,6 +146,13 @@ async function createCustomer(req, res) {
 
     const result = await customerService.createCustomer(businessId, workerId, customerData);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'customer_added',
+      'New Customer',
+      `${req.workerName} added customer '${result.customer.name}'`,
+      'customer', result.customer.id
+    );
     return res.status(201).json({ success: true, customer: result.customer, message: 'Customer created successfully' });
   } catch (error) {
     console.error('Error in createCustomer:', error);

@@ -1,5 +1,6 @@
 const workerService = require('../services/workerService');
 const { safeMessage } = require('../utils/errors');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Worker Management Controller
@@ -26,6 +27,13 @@ class WorkerController {
         email,
       });
 
+      createNotification(
+        req.businessId, req.workerId, req.workerName, req.role,
+        'worker_added',
+        'New Team Member',
+        `${req.workerName} added ${result.worker?.worker_name || 'a new team member'} to the team`,
+        'worker', result.worker?.id
+      );
       res.status(201).json({
         success: true,
         message: 'Worker added successfully',

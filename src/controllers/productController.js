@@ -1,5 +1,6 @@
 const productService = require('../services/productService');
 const pendingService = require('../services/pendingService');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Product Controller
@@ -126,6 +127,13 @@ async function createProduct(req, res) {
         entityName:  productData.name || 'New Product',
         payload:     productData,
       });
+      createNotification(
+        businessId, workerId, req.workerName, role,
+        'product_pending',
+        'Product Awaiting Approval',
+        `${req.workerName} submitted '${productData.name || 'a product'}' for approval`,
+        'product', null
+      );
       return res.status(202).json({
         success: true,
         pending: true,
@@ -136,6 +144,13 @@ async function createProduct(req, res) {
 
     const result = await productService.createProduct(businessId, workerId, productData);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'product_added',
+      'Product Added',
+      `${req.workerName} added '${result.product.name}' to inventory`,
+      'product', result.product.id
+    );
     return res.status(201).json({ success: true, product: result.product, message: 'Product created successfully' });
   } catch (error) {
     console.error('Error in createProduct:', error);
@@ -172,6 +187,13 @@ async function updateProduct(req, res) {
           previous_quantity: current.product?.quantity ?? 0,
         },
       });
+      createNotification(
+        businessId, workerId, req.workerName, role,
+        'product_pending',
+        'Product Update Awaiting Approval',
+        `${req.workerName} requested an update for '${current.product?.name || 'a product'}' — pending approval`,
+        'product', id
+      );
       return res.status(202).json({
         success: true,
         pending: true,
@@ -182,6 +204,13 @@ async function updateProduct(req, res) {
 
     const result = await productService.updateProduct(businessId, workerId, id, updates);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'product_updated',
+      'Product Updated',
+      `${req.workerName} updated '${result.product.name}'`,
+      'product', result.product.id
+    );
     return res.status(200).json({ success: true, product: result.product, message: 'Product updated successfully' });
   } catch (error) {
     console.error('Error in updateProduct:', error);
@@ -213,6 +242,13 @@ async function deleteProduct(req, res) {
         entityName:  current.product?.name || id,
         payload:     { id },
       });
+      createNotification(
+        businessId, workerId, req.workerName, role,
+        'product_pending',
+        'Product Delete Awaiting Approval',
+        `${req.workerName} requested deletion of '${current.product?.name || 'a product'}' — pending approval`,
+        'product', id
+      );
       return res.status(202).json({
         success: true,
         pending: true,
@@ -223,6 +259,13 @@ async function deleteProduct(req, res) {
 
     const result = await productService.deleteProduct(businessId, id);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'product_deleted',
+      'Product Deleted',
+      `${req.workerName} deleted a product from inventory`,
+      'product', id
+    );
     return res.status(200).json({ success: true, message: result.message });
   } catch (error) {
     console.error('Error in deleteProduct:', error);
