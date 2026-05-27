@@ -48,17 +48,25 @@ export function ActiveLocationProvider({ children }) {
     clearSafetyTimer();
     safetyTimerRef.current = setTimeout(() => {
       if (isMountedRef.current && requestIdRef.current === reqId) {
-        console.warn('[ActiveLocation] safety timeout — clearing loading state');
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[ActiveLocation] safety timeout — clearing loading state');
+        }
         setLoading(false);
       }
     }, 6000);
 
-    console.log('[ActiveLocation] loadLocations:start (req', reqId + ')');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[ActiveLocation] loadLocations:start (req', reqId + ')');
+    }
     try {
       const res = await locationsAPI.getAll();
-      console.log('[ActiveLocation] loadLocations:api-res (req', reqId + ')', res?.data?.locations);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[ActiveLocation] loadLocations:api-res (req', reqId + ')', res?.data?.locations);
+      }
       if (!isMountedRef.current || requestIdRef.current !== reqId) {
-        console.log('[ActiveLocation] loadLocations:ignoring stale response (req', reqId + ')');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[ActiveLocation] loadLocations:ignoring stale response (req', reqId + ')');
+        }
         return;
       }
       setLocations(res.data.locations || []);
@@ -70,7 +78,9 @@ export function ActiveLocationProvider({ children }) {
       clearSafetyTimer();
       if (isMountedRef.current && requestIdRef.current === reqId) {
         setLoading(false);
-        console.log('[ActiveLocation] loadLocations:done -> loading:false (req', reqId + ')');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[ActiveLocation] loadLocations:done -> loading:false (req', reqId + ')');
+        }
       }
     }
   }, [user]);

@@ -38,7 +38,9 @@ export function AuthProvider({ children }) {
   useEffect(() => { verifyToken(); }, [verifyToken]);
 
   const login = (token, userData) => {
-    console.log('[AuthContext] login called, token=', token, 'userData=', userData);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[AuthContext] login called, userData=', userData);
+    }
     localStorage.setItem(config.tokenKey, token);
     setUser(userData);
     // Notify locations context to reload after login.
