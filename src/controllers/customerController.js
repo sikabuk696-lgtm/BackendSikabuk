@@ -129,7 +129,7 @@ async function createCustomer(req, res) {
         entityName:  customerData.name || 'New Customer',
         payload:     customerData,
       });
-      createNotification(
+      await createNotification(
         businessId, workerId, req.workerName, role,
         'customer_pending',
         'New Customer Awaiting Approval',
@@ -146,7 +146,7 @@ async function createCustomer(req, res) {
 
     const result = await customerService.createCustomer(businessId, workerId, customerData);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'customer_added',
       'New Customer',

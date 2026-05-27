@@ -127,7 +127,7 @@ async function createProduct(req, res) {
         entityName:  productData.name || 'New Product',
         payload:     productData,
       });
-      createNotification(
+      await createNotification(
         businessId, workerId, req.workerName, role,
         'product_pending',
         'Product Awaiting Approval',
@@ -144,7 +144,7 @@ async function createProduct(req, res) {
 
     const result = await productService.createProduct(businessId, workerId, productData);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'product_added',
       'Product Added',
@@ -187,7 +187,7 @@ async function updateProduct(req, res) {
           previous_quantity: current.product?.quantity ?? 0,
         },
       });
-      createNotification(
+      await createNotification(
         businessId, workerId, req.workerName, role,
         'product_pending',
         'Product Update Awaiting Approval',
@@ -204,7 +204,7 @@ async function updateProduct(req, res) {
 
     const result = await productService.updateProduct(businessId, workerId, id, updates);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'product_updated',
       'Product Updated',
@@ -242,7 +242,7 @@ async function deleteProduct(req, res) {
         entityName:  current.product?.name || id,
         payload:     { id },
       });
-      createNotification(
+      await createNotification(
         businessId, workerId, req.workerName, role,
         'product_pending',
         'Product Delete Awaiting Approval',
@@ -259,7 +259,7 @@ async function deleteProduct(req, res) {
 
     const result = await productService.deleteProduct(businessId, id);
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'product_deleted',
       'Product Deleted',

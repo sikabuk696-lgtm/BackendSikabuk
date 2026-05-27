@@ -126,7 +126,7 @@ async function createExpense(req, res) {
       });
     }
 
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'expense_added',
       'Expense Added',

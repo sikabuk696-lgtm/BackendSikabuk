@@ -27,7 +27,7 @@ class WorkerController {
         email,
       });
 
-      createNotification(
+      await createNotification(
         req.businessId, req.workerId, req.workerName, req.role,
         'worker_added',
         'New Team Member',

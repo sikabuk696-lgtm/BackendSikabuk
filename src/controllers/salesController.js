@@ -134,7 +134,7 @@ async function createSale(req, res) {
       });
     }
 
-    createNotification(
+    await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
       'sale_created',
       'New Sale Recorded',
