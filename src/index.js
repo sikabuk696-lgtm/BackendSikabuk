@@ -41,11 +41,9 @@ app.use(helmet({
 // ── CORS
 const corsOptions = {
   origin(origin, callback) {
-    // Allow server-to-server calls (no Origin header) only in dev
-    if (!origin) {
-      if (config.isDevelopment) return callback(null, true);
-      return callback(new Error('Origin header required'));
-    }
+    // Allow requests with no Origin header (health checks, server-to-server, curl)
+    // Browsers always send Origin for cross-origin requests, so this is safe
+    if (!origin) return callback(null, true);
     const allowed = [config.frontendUrl, config.frontendUrl?.replace('https://', 'https://www.')];
     if (allowed.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS: origin '${origin}' not allowed`));
