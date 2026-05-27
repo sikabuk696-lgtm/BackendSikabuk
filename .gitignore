@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 package-lock.json
 yarn.lock
@@ -10,6 +10,20 @@ pnpm-lock.yaml
 .env.development
 .env.production
 .env.test
+.env*.local
+
+# Build outputs
+dist/
+build/
+out/
+/backend/dist
+/backend/build
+/frontend/build
+
+# Coverage directory
+coverage/
+*.lcov
+.nyc_output
 
 # Logs
 logs/
@@ -29,27 +43,17 @@ pids/
 *.seed
 *.pid.lock
 
-# Build outputs
-dist/
-build/
-out/
-
-# Coverage directory
-coverage/
-*.lcov
-.nyc_output
-
 # IDE and Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
+.vscode-test/
 
 # OS files
-Thumbs.db
 .DS_Store
+Thumbs.db
 
 # Temporary files
 *.tmp
@@ -68,15 +72,9 @@ Thumbs.db
 # Output of 'npm pack'
 *.tgz
 
-# dotenv environment variable files
-.env*.local
-
 # Supabase local (if using Supabase CLI locally)
 .supabase/
 
 # Testing
 *.test.local.js
 test-results/
-
-# Debug
-.vscode-test/
