@@ -12,6 +12,7 @@ const TYPE_ICONS = {
   expense_added:    '💸',
   customer_added:   '👤',
   customer_pending: '⏳',
+  daily_batch_approved: '✅',
   worker_added:     '👷',
 };
 

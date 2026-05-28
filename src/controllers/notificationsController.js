@@ -16,6 +16,7 @@ const { supabase } = require('../config/database');
  *   worker_added        — team hiring decisions (management only)
  *   product_pending     — approval workflow (owner/cofounder only)
  *   customer_pending    — approval workflow (owner/cofounder only)
+ *   daily_batch_approved — batch approval workflow (owner/cofounder only)
  */
 const WORKER_ALLOWED_TYPES = [
   'sale_created',
