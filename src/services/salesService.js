@@ -594,7 +594,7 @@ async function getDailyBatches(businessId, filters = {}) {
   try {
     let query = supabase
       .from('daily_batches')
-      .select('*, locations:location_id (id, name)')
+      .select('*, locations:location_id (id, name), approver:workers!approved_by (id, worker_name)')
       .eq('business_id', businessId)
       .order('batch_date', { ascending: false });
 
@@ -641,7 +641,7 @@ async function getBatchDetails(businessId, batchId) {
     // Get batch info
     const { data: batch, error: batchError } = await supabase
       .from('daily_batches')
-      .select('*')
+      .select('*, approver:workers!approved_by (id, worker_name)')
       .eq('id', batchId)
       .eq('business_id', businessId)
       .single();
