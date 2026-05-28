@@ -351,6 +351,11 @@ export default function DailyBatchesPage() {
                                     </>
                                   )}
                                 </span>
+                                {batch.approved && batch.approver?.worker_name && (
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3 }}>
+                                    by {batch.approver.worker_name}
+                                  </div>
+                                )}
                               </td>
                               <td>
                                 <div style={{ display: 'flex', gap: 8 }}>
@@ -536,7 +541,11 @@ function BatchDetailsModal({ batch, isOpen, onClose }) {
               <div className="stat-value">
                 {batch.batch.approved ? 'Approved' : 'Pending'}
               </div>
-              <div className="stat-label">Status</div>
+              <div className="stat-label">
+                {batch.batch.approved && batch.batch.approver?.worker_name
+                  ? `by ${batch.batch.approver.worker_name}`
+                  : 'Status'}
+              </div>
             </div>
           </div>
         </div>
