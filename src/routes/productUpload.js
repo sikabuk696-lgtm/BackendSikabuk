@@ -1,10 +1,31 @@
 const multer = require('multer');
 const xlsx = require('xlsx');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const productService = require('../services/productService');
 const { authenticate } = require('../middleware/auth');
 const { workerOrOwner } = require('../middleware/permissions');
+
+const MAX_ROWS = 10000;
+const ALLOWED_EXTENSIONS = ['.xls', '.xlsx'];
+const ALLOWED_MIMES = [
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+];
+
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many upload attempts. Please try again later.' }
+});
+
+function hasAllowedExcelExtension(filename = '') {
+  const lower = String(filename).toLowerCase();
+  return ALLOWED_EXTENSIONS.some((extension) => lower.endsWith(extension));
+}
 
 // Multer setup for file uploads
 const storage = multer.memoryStorage();
@@ -15,11 +36,7 @@ const upload = multer({
   },
   fileFilter: (req, file, cb) => {
     // Only allow Excel files
-    const allowedMimes = [
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    ];
-    if (allowedMimes.includes(file.mimetype)) {
+    if (ALLOWED_MIMES.includes(file.mimetype) && hasAllowedExcelExtension(file.originalname)) {
       cb(null, true);
     } else {
       cb(new Error('Only Excel files (.xls, .xlsx) are allowed'));
@@ -28,7 +45,7 @@ const upload = multer({
 });
 
 // POST /api/products/upload-excel - Upload Excel file to bulk import products
-router.post('/upload-excel', authenticate, workerOrOwner, upload.single('file'), async (req, res) => {
+router.post('/upload-excel', authenticate, workerOrOwner, uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     const businessId = req.businessId;
     const workerId = req.workerId;
@@ -37,15 +54,22 @@ router.post('/upload-excel', authenticate, workerOrOwner, upload.single('file'),
     }
     
     // Parse Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const workbook = xlsx.read(req.file.buffer, {
+      type: 'buffer',
+      dense: true,
+      cellFormula: false,
+      cellHTML: false
+    });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
+    if (!sheetName || !sheet) {
+      return res.status(400).json({ success: false, error: 'Excel file does not contain a readable worksheet' });
+    }
     
     // Get all rows as arrays
     const allRowsArray = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
     
     // Check row limit to prevent memory issues
-    const MAX_ROWS = 10000;
     if (allRowsArray.length > MAX_ROWS) {
       return res.status(400).json({ 
         success: false, 
@@ -299,7 +323,7 @@ router.post('/upload-excel', authenticate, workerOrOwner, upload.single('file'),
       return res.status(400).json({ success: false, error: `File upload error: ${error.message}` });
     }
     
-    res.status(500).json({ success: false, error: 'Failed to process Excel file: ' + error.message });
+    res.status(500).json({ success: false, error: 'Failed to process Excel file' });
   }
 });
 

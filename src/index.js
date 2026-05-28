@@ -17,6 +17,7 @@ const { globalErrorHandler } = require('./utils/errors');
 const { sanitizeRequest } = require('./middleware/sanitize');
 
 const app = express();
+const MAX_JSON_BODY_LIMIT = '100kb';
 
 // ── Trust the first proxy hop (Render.com, Nginx, etc.)
 // Required so express-rate-limit reads the real client IP from X-Forwarded-For
@@ -58,8 +59,8 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // ── Body parsing with explicit size limits
-app.use(express.json({ limit: '100kb' }));
-app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+app.use(express.json({ limit: MAX_JSON_BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: MAX_JSON_BODY_LIMIT }));
 
 // ── Global input sanitization (prototype pollution, null bytes, control chars)
 app.use(sanitizeRequest);
@@ -107,7 +108,7 @@ const server = app.listen(config.port, () => {
   console.log('✅ Server started successfully');
   console.log(`🌍 Environment: ${config.nodeEnv}`);
   console.log(`🔗 Frontend URL: ${config.frontendUrl}`);
-  console.log(`🔐 JWT Secret: ${String(config.jwt?.secret ?? '').slice(0, 12) + '...'}`);
+  console.log(`🔐 JWT Secret: ${config.jwt?.secret ? '[configured]' : '[missing]'}`);
   console.log(`⚡ Supabase: ${config.supabase ? '✅ Connected' : '❌ Not configured'}`);
   console.log(`${'='.repeat(50)}\n`);
 });
