@@ -767,6 +767,7 @@ async function approveDailyBatch(businessId, batchId, ownerId) {
 
     return {
       success: true,
+      batchDate: batch.batch_date,
       message: `Daily sales for ${batch.batch_date} have been approved`
     };
   } catch (error) {

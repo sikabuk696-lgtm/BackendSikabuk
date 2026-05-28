@@ -289,6 +289,18 @@ async function approveBatch(req, res) {
       });
     }
 
+    await createNotification(
+      req.businessId,
+      req.workerId,
+      req.workerName,
+      req.role,
+      'daily_batch_approved',
+      'Daily Batch Approved',
+      `${req.workerName} approved the daily batch for ${result.batchDate}`,
+      'daily_batch',
+      batchId
+    );
+
     return res.status(200).json({
       success: true,
       message: result.message
