@@ -87,7 +87,7 @@ if (config.jwt.secret && config.jwt.secret.length < 32) {
 // Log current environment
 console.log(`🌍 Environment: ${env}`);
 console.log(`🔗 Frontend URL: ${config.frontendUrl}`);
-console.log(`🔐 JWT Secret: ${config.jwt.secret.substring(0, 10)}...`);
+console.log(`🔐 JWT Secret: ${config.jwt.secret ? '[configured]' : '[missing]'}`);
 console.log(`⚡ Supabase: ${config.supabase.url ? '✅ Connected' : '❌ Not configured'}`);
 
 module.exports = config;

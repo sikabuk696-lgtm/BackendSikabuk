@@ -6,6 +6,7 @@ const config = require('../config/env');
 const PHONE_REGEX = /^0\d{9}$/;
 const PIN_REGEX = /^\d{4}$/;
 const SALT_ROUNDS = 10;
+const JWT_ALGORITHM = 'HS256';
 
 /**
  * Authentication Service - Multi-User Business Model
@@ -481,7 +482,7 @@ class AuthService {
     return jwt.sign(
       { ...payload, type: 'pin_pending' },
       config.jwt.secret,
-      { expiresIn: '15m' }
+      { expiresIn: '15m', algorithm: JWT_ALGORITHM }
     );
   }
 
@@ -497,7 +498,7 @@ class AuthService {
 
     let decoded;
     try {
-      decoded = jwt.verify(tempToken, config.jwt.secret);
+      decoded = jwt.verify(tempToken, config.jwt.secret, { algorithms: [JWT_ALGORITHM] });
     } catch (_) {
       throw { status: 401, message: 'Token expired or invalid. Please sign in with Google again.' };
     }
@@ -544,7 +545,7 @@ class AuthService {
 
     let decoded;
     try {
-      decoded = jwt.verify(tempToken, config.jwt.secret);
+      decoded = jwt.verify(tempToken, config.jwt.secret, { algorithms: [JWT_ALGORITHM] });
     } catch (_) {
       throw { status: 401, message: 'Session expired. Please sign in with Google again.' };
     }
@@ -597,7 +598,7 @@ class AuthService {
     return jwt.sign(
       payload,
       config.jwt.secret,
-      { expiresIn: config.jwt.expiresIn }
+      { expiresIn: config.jwt.expiresIn, algorithm: JWT_ALGORITHM }
     );
   }
 
@@ -606,7 +607,7 @@ class AuthService {
    */
   verifyToken(token) {
     try {
-      return jwt.verify(token, config.jwt.secret);
+      return jwt.verify(token, config.jwt.secret, { algorithms: [JWT_ALGORITHM] });
     } catch (error) {
       throw { status: 401, message: 'Invalid or expired token' };
     }
