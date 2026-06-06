@@ -297,8 +297,8 @@ export default function ReportsPage() {
 
           </div>
 
-          {/* Sales Summary mini row */}
-          <div className="report-row" style={{ marginBottom: 24 }}>
+          {/* Cash Flow + Sales Summary row */}
+          <div className="report-summary-row">
             {(() => { const p = kpiParts(cashFlow); return (
             <div className="kpi-card cashflow report-cashflow-card">
               <div className="kpi-card-top">
