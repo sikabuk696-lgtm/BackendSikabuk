@@ -343,22 +343,42 @@
 .expense-layout {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 20px 24px 24px;
+  gap: 0;
+  padding: 8px 24px 24px;
 }
-.expense-legend { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+
+/* Donut chart wrapper */
+.expense-donut-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* Legend */
+.expense-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1.5px solid #F1F5F9;
+}
 .expense-legend-item {
   display: grid;
-  grid-template-columns: 10px 1fr 90px 38px 100px;
+  grid-template-columns: 12px 1fr 80px 44px 110px;
   align-items: center;
   gap: 10px;
   font-size: 0.83rem;
+  padding: 5px 0;
+  border-radius: 8px;
+  transition: background 0.14s;
 }
+.expense-legend-item:hover { background: #F8FAFC; }
 .expense-legend-dot {
-  width: 10px; height: 10px;
+  width: 12px; height: 12px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,0.08);
 }
 .expense-legend-name {
   color: #1E293B;
@@ -369,30 +389,32 @@
   min-width: 0;
 }
 .expense-legend-bar-wrap {
-  height: 6px;
-  background: #E8ECF1;
-  border-radius: 3px;
+  height: 5px;
+  background: #EEF2F6;
+  border-radius: 99px;
   overflow: hidden;
 }
 .expense-legend-bar {
   height: 100%;
-  border-radius: 3px;
-  transition: width 0.6s ease;
-  min-width: 4px;
+  border-radius: 99px;
+  transition: width 0.7s cubic-bezier(.4,0,.2,1);
+  min-width: 3px;
 }
 .expense-legend-pct {
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   color: #94A3B8;
   font-weight: 700;
   text-align: right;
+  font-feature-settings: "tnum";
 }
 .expense-legend-amount {
   font-weight: 800;
   color: #0F172A;
   text-align: right;
-  font-size: 0.83rem;
+  font-size: 0.84rem;
   white-space: nowrap;
   font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
 }
 
 /* ═══════════════════════════

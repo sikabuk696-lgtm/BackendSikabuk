@@ -454,36 +454,53 @@ export default function ReportsPage() {
                 <p className="no-chart-data">No data for this period</p>
               ) : (
                 <div className="expense-layout">
-                  <ResponsiveContainer width="100%" height={210}>
-                    <PieChart>
-                      <Pie
-                        data={expenseData}
-                        dataKey="amount"
-                        nameKey="category"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={85}
-                      label={false}
-                      >
-                        {expenseData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLOURS[index % COLOURS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v) => formatMoney(v)} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="expense-donut-wrap">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={expenseData}
+                          dataKey="amount"
+                          nameKey="category"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={58}
+                          outerRadius={90}
+                          paddingAngle={expenseData.length > 1 ? 3 : 0}
+                          label={false}
+                          strokeWidth={0}
+                        >
+                          {expenseData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLOURS[index % COLOURS.length]}
+                              opacity={0.92}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(v, name) => [formatMoney(v), name]}
+                          contentStyle={{ borderRadius: 10, border: '1px solid #E8ECF1', fontSize: 13, padding: '8px 12px' }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className="expense-legend">
-                    {expenseData.map((entry, index) => (
+                    {expenseData.map((entry, index) => {
+                      const rawPct = entry.percentage;
+                      const pctNum = typeof rawPct === 'string' ? parseFloat(rawPct) : rawPct;
+                      const pctDisplay = Number.isFinite(pctNum) ? pctNum.toFixed(1) : '0.0';
+                      return (
                       <div key={entry.category} className="expense-legend-item">
                         <span className="expense-legend-dot" style={{ background: COLOURS[index % COLOURS.length] }} />
                         <span className="expense-legend-name">{entry.category}</span>
                         <div className="expense-legend-bar-wrap">
-                          <div className="expense-legend-bar" style={{ width: `${entry.percentage}%`, background: COLOURS[index % COLOURS.length] }} />
+                          <div className="expense-legend-bar" style={{ width: `${pctNum || 0}%`, background: COLOURS[index % COLOURS.length] }} />
                         </div>
-                        <span className="expense-legend-pct">{entry.percentage}%</span>
+                        <span className="expense-legend-pct">{pctDisplay}%</span>
                         <span className="expense-legend-amount">{formatMoney(entry.amount)}</span>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
