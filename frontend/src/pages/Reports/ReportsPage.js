@@ -485,6 +485,16 @@ export default function ReportsPage() {
                         />
                       </PieChart>
                     </ResponsiveContainer>
+                    {/* Center hole label */}
+                    <div className="expense-donut-center">
+                      <span className="expense-donut-label">TOTAL</span>
+                      <span className="expense-donut-value">{formatMoney(totalExpenses)}</span>
+                      {expenseData.length === 1 && (
+                        <span className="expense-donut-pct">
+                          {(() => { const r = expenseData[0].percentage; const n = typeof r === 'string' ? parseFloat(r) : r; return Number.isFinite(n) ? n.toFixed(1) : '100.0'; })()}%
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="expense-legend">
                     {expenseData.map((entry, index) => {

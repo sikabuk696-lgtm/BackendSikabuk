@@ -353,6 +353,46 @@
   width: 100%;
 }
 
+/* Center hole overlay */
+.expense-donut-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  gap: 1px;
+}
+
+.expense-donut-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  line-height: 1;
+}
+
+.expense-donut-value {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.expense-donut-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748B;
+  line-height: 1;
+}
+
 /* Legend */
 .expense-legend {
   display: flex;
