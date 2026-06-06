@@ -1,4 +1,167 @@
+const path = require('path');
 const { supabase } = require('../config/supabase');
+const config = require('../config/env');
+
+const EXPENSE_ATTACHMENTS_BUCKET = config.supabase.expenseAttachmentsBucket;
+const SIGNED_URL_TTL_SECONDS = 60 * 60;
+const REQUIRED_ATTACHMENT_CATEGORIES = ['bank transfer'];
+
+function categoryRequiresAttachment(category = '') {
+  return REQUIRED_ATTACHMENT_CATEGORIES.includes(String(category).trim().toLowerCase());
+}
+
+function getAttachmentExtension(file = {}) {
+  const originalExtension = path.extname(file.originalname || '').toLowerCase();
+  if (originalExtension) {
+    return originalExtension;
+  }
+
+  switch (file.mimetype) {
+    case 'image/jpeg':
+      return '.jpg';
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    case 'application/pdf':
+      return '.pdf';
+    default:
+      return '';
+  }
+}
+
+function sanitizeAttachmentName(filename = '') {
+  const extension = path.extname(filename);
+  const baseName = path.basename(filename, extension);
+  const safeBaseName = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'proof';
+
+  return `${safeBaseName}${extension.toLowerCase()}`;
+}
+
+async function listExpenseAttachments(businessId, expenseId) {
+  const folder = `${businessId}/${expenseId}`;
+  const { data, error } = await supabase
+    .storage
+    .from(EXPENSE_ATTACHMENTS_BUCKET)
+    .list(folder, {
+      limit: 20,
+      sortBy: { column: 'created_at', order: 'desc' }
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || [])
+    .filter((item) => item.name && !item.id?.endsWith('/'))
+    .map((item) => ({
+      name: item.name,
+      path: `${folder}/${item.name}`,
+      mimeType: item.metadata?.mimetype || item.metadata?.contentType || null,
+      size: item.metadata?.size || item.metadata?.contentLength || null,
+      createdAt: item.created_at || null,
+      updatedAt: item.updated_at || null,
+    }));
+}
+
+async function buildAttachmentPayload(businessId, expenseId) {
+  try {
+    const attachments = await listExpenseAttachments(businessId, expenseId);
+    const latestAttachment = attachments[0];
+    if (!latestAttachment) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .storage
+      .from(EXPENSE_ATTACHMENTS_BUCKET)
+      .createSignedUrl(latestAttachment.path, SIGNED_URL_TTL_SECONDS);
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      fileName: latestAttachment.name,
+      fileType: latestAttachment.mimeType,
+      fileSize: latestAttachment.size,
+      path: latestAttachment.path,
+      uploadedAt: latestAttachment.createdAt || latestAttachment.updatedAt,
+      url: data?.signedUrl || null,
+    };
+  } catch (error) {
+    console.warn(`Unable to read expense attachment for ${expenseId}:`, error.message);
+    return null;
+  }
+}
+
+async function attachExpenseProof(expense) {
+  const attachment = await buildAttachmentPayload(expense.business_id, expense.id);
+  return {
+    ...expense,
+    attachment,
+  };
+}
+
+async function attachExpenseProofs(expenses) {
+  return Promise.all((expenses || []).map((expense) => attachExpenseProof(expense)));
+}
+
+async function removeExpenseAttachments(businessId, expenseId) {
+  try {
+    const attachments = await listExpenseAttachments(businessId, expenseId);
+    if (!attachments.length) {
+      return;
+    }
+
+    const { error } = await supabase
+      .storage
+      .from(EXPENSE_ATTACHMENTS_BUCKET)
+      .remove(attachments.map((attachment) => attachment.path));
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn(`Unable to remove expense attachments for ${expenseId}:`, error.message);
+  }
+}
+
+async function getLatestExpenseAttachment(businessId, expenseId) {
+  const attachments = await listExpenseAttachments(businessId, expenseId);
+  return attachments[0] || null;
+}
+
+async function uploadExpenseAttachment(businessId, expenseId, file) {
+  if (!file) {
+    return null;
+  }
+
+  await removeExpenseAttachments(businessId, expenseId);
+
+  const extension = getAttachmentExtension(file);
+  const safeName = sanitizeAttachmentName(file.originalname || `proof${extension}`);
+  const storagePath = `${businessId}/${expenseId}/${Date.now()}-${safeName}`;
+
+  const { error } = await supabase
+    .storage
+    .from(EXPENSE_ATTACHMENTS_BUCKET)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return buildAttachmentPayload(businessId, expenseId);
+}
 
 /**
  * Expense Service
@@ -44,9 +207,11 @@ async function getExpenses(businessId, filters = {}) {
     // Calculate total amount
     const totalAmount = data.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
 
+    const enrichedExpenses = await attachExpenseProofs(data);
+
     return {
       success: true,
-      expenses: data,
+      expenses: enrichedExpenses,
       count: count,
       totalAmount: totalAmount
     };
@@ -84,9 +249,11 @@ async function getExpenseById(businessId, expenseId) {
       throw error;
     }
 
+    const enrichedExpense = await attachExpenseProof(data);
+
     return {
       success: true,
-      expense: data
+      expense: enrichedExpense
     };
   } catch (error) {
     console.error('Error fetching expense:', error);
@@ -104,7 +271,7 @@ async function getExpenseById(businessId, expenseId) {
  * @param {object} expenseData - Expense details
  * @returns {Promise<object>} - { success, expense }
  */
-async function createExpense(businessId, workerId, expenseData) {
+async function createExpense(businessId, workerId, expenseData, attachmentFile = null) {
   try {
     const { description, amount, category, expense_date } = expenseData;
 
@@ -121,6 +288,13 @@ async function createExpense(businessId, workerId, expenseData) {
       return {
         success: false,
         error: 'Amount cannot be negative'
+      };
+    }
+
+    if (categoryRequiresAttachment(category) && !attachmentFile) {
+      return {
+        success: false,
+        error: 'Proof attachment is required for bank transfer expenses'
       };
     }
 
@@ -142,9 +316,15 @@ async function createExpense(businessId, workerId, expenseData) {
 
     if (error) throw error;
 
+    if (attachmentFile) {
+      await uploadExpenseAttachment(businessId, data.id, attachmentFile);
+    }
+
+    const enrichedExpense = await attachExpenseProof(data);
+
     return {
       success: true,
-      expense: data
+      expense: enrichedExpense
     };
   } catch (error) {
     console.error('Error creating expense:', error);
@@ -163,7 +343,7 @@ async function createExpense(businessId, workerId, expenseData) {
  * @param {object} updates - Fields to update
  * @returns {Promise<object>} - { success, expense }
  */
-async function updateExpense(businessId, workerId, expenseId, updates) {
+async function updateExpense(businessId, workerId, expenseId, updates, attachmentFile = null) {
   try {
     // Check if expense exists and belongs to business
     const existingExpense = await getExpenseById(businessId, expenseId);
@@ -174,6 +354,7 @@ async function updateExpense(businessId, workerId, expenseId, updates) {
     // Validate updates
     const allowedFields = ['description', 'amount', 'category', 'expense_date'];
     const updateData = {};
+    const removeAttachment = updates.remove_attachment === true || updates.remove_attachment === 'true';
 
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
@@ -194,26 +375,52 @@ async function updateExpense(businessId, workerId, expenseId, updates) {
       }
     }
 
-    if (Object.keys(updateData).length === 0) {
+    if (Object.keys(updateData).length === 0 && !attachmentFile && !removeAttachment) {
       return {
         success: false,
         error: 'No valid fields to update'
       };
     }
 
-    const { data, error } = await supabase
-      .from('expenses')
-      .update(updateData)
-      .eq('id', expenseId)
-      .eq('business_id', businessId)
-      .select()
-      .single();
+    const nextCategory = updateData.category || existingExpense.expense.category;
+    const hasExistingAttachment = Boolean(existingExpense.expense.attachment);
+    const willHaveAttachment = Boolean(attachmentFile) || (hasExistingAttachment && !removeAttachment);
 
-    if (error) throw error;
+    if (categoryRequiresAttachment(nextCategory) && !willHaveAttachment) {
+      return {
+        success: false,
+        error: 'Proof attachment is required for bank transfer expenses'
+      };
+    }
+
+    let data = existingExpense.expense;
+
+    if (Object.keys(updateData).length > 0) {
+      const updateResult = await supabase
+        .from('expenses')
+        .update(updateData)
+        .eq('id', expenseId)
+        .eq('business_id', businessId)
+        .select()
+        .single();
+
+      if (updateResult.error) throw updateResult.error;
+      data = updateResult.data;
+    }
+
+    if (removeAttachment) {
+      await removeExpenseAttachments(businessId, expenseId);
+    }
+
+    if (attachmentFile) {
+      await uploadExpenseAttachment(businessId, expenseId, attachmentFile);
+    }
+
+    const enrichedExpense = await attachExpenseProof(data);
 
     return {
       success: true,
-      expense: data
+      expense: enrichedExpense
     };
   } catch (error) {
     console.error('Error updating expense:', error);
@@ -238,6 +445,8 @@ async function deleteExpense(businessId, expenseId) {
       return existingExpense;
     }
 
+    await removeExpenseAttachments(businessId, expenseId);
+
     const { error } = await supabase
       .from('expenses')
       .delete()
@@ -252,6 +461,47 @@ async function deleteExpense(businessId, expenseId) {
     };
   } catch (error) {
     console.error('Error deleting expense:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+async function getExpenseAttachmentDownload(businessId, expenseId) {
+  try {
+    const existingExpense = await getExpenseById(businessId, expenseId);
+    if (!existingExpense.success) {
+      return existingExpense;
+    }
+
+    const latestAttachment = await getLatestExpenseAttachment(businessId, expenseId);
+    if (!latestAttachment) {
+      return {
+        success: false,
+        error: 'Expense attachment not found'
+      };
+    }
+
+    const { data, error } = await supabase
+      .storage
+      .from(EXPENSE_ATTACHMENTS_BUCKET)
+      .download(latestAttachment.path);
+
+    if (error) {
+      throw error;
+    }
+
+    const arrayBuffer = await data.arrayBuffer();
+
+    return {
+      success: true,
+      fileName: latestAttachment.name,
+      fileType: latestAttachment.mimeType || 'application/octet-stream',
+      fileBuffer: Buffer.from(arrayBuffer)
+    };
+  } catch (error) {
+    console.error('Error downloading expense attachment:', error);
     return {
       success: false,
       error: error.message
@@ -322,5 +572,6 @@ module.exports = {
   createExpense,
   updateExpense,
   deleteExpense,
-  getExpensesByCategory
+  getExpensesByCategory,
+  getExpenseAttachmentDownload
 };

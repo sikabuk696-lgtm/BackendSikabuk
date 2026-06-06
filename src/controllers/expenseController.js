@@ -108,6 +108,36 @@ async function getExpense(req, res) {
 }
 
 /**
+ * GET /api/expenses/:id/attachment/download
+ * Download the proof attachment for a single expense
+ */
+async function downloadExpenseAttachment(req, res) {
+  try {
+    const businessId = req.businessId;
+    const { id } = req.params;
+
+    const result = await expenseService.getExpenseAttachmentDownload(businessId, id);
+
+    if (!result.success) {
+      return res.status(404).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.setHeader('Content-Type', result.fileType);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    return res.status(200).send(result.fileBuffer);
+  } catch (error) {
+    console.error('Error in downloadExpenseAttachment:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+}
+
+/**
  * POST /api/expenses
  * Create a new expense
  */
@@ -117,7 +147,7 @@ async function createExpense(req, res) {
     const workerId = req.workerId;
     const expenseData = req.body;
 
-    const result = await expenseService.createExpense(businessId, workerId, expenseData);
+    const result = await expenseService.createExpense(businessId, workerId, expenseData, req.file || null);
 
     if (!result.success) {
       return res.status(400).json({
@@ -158,7 +188,7 @@ async function updateExpense(req, res) {
     const { id } = req.params;
     const updates = req.body;
 
-    const result = await expenseService.updateExpense(businessId, workerId, id, updates);
+    const result = await expenseService.updateExpense(businessId, workerId, id, updates, req.file || null);
 
     if (!result.success) {
       return res.status(400).json({
@@ -216,6 +246,7 @@ module.exports = {
   getAllExpenses,
   getByCategory,
   getExpense,
+  downloadExpenseAttachment,
   createExpense,
   updateExpense,
   deleteExpense
