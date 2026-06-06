@@ -197,6 +197,14 @@ async function updateExpense(req, res) {
       });
     }
 
+    await createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'expense_updated',
+      'Expense Updated',
+      `${req.workerName} updated expense '${result.expense.description || 'Expense'}' — GH₵${parseFloat(result.expense.amount || 0).toFixed(2)}`,
+      'expense', result.expense.id
+    );
+
     return res.status(200).json({
       success: true,
       expense: result.expense,
@@ -218,6 +226,9 @@ async function updateExpense(req, res) {
 async function deleteExpense(req, res) {
   try {
     const businessId = req.businessId;
+    const workerId = req.workerId;
+    const workerName = req.workerName;
+    const role = req.role;
     const { id } = req.params;
 
     const result = await expenseService.deleteExpense(businessId, id);
@@ -228,6 +239,14 @@ async function deleteExpense(req, res) {
         error: result.error
       });
     }
+
+    await createNotification(
+      businessId, workerId, workerName, role,
+      'expense_deleted',
+      'Expense Deleted',
+      `${workerName} deleted an expense`,
+      'expense', id
+    );
 
     return res.status(200).json({
       success: true,
