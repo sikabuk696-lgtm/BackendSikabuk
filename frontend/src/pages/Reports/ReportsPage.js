@@ -165,10 +165,12 @@ export default function ReportsPage() {
   // Exact same smartNum used in Dashboard
   const smartNum = (val) => {
     const n = convertAmount(val);
+    const abs = Math.abs(n);
+    const sign = n < 0 ? '-' : '';
     const locale = currency === 'USD' ? 'en-US' : 'en-GH';
-    if (n >= 1_000_000_000) return { num: (n / 1_000_000_000).toFixed(n >= 10_000_000_000 ? 1 : 2), unit: 'B' };
-    if (n >= 1_000_000)     return { num: (n / 1_000_000).toFixed(n >= 10_000_000 ? 1 : 2), unit: 'M' };
-    if (n >= 1_000)         return { num: (n / 1_000).toFixed(n >= 10_000 ? 1 : 2), unit: 'K' };
+    if (abs >= 1_000_000_000) return { num: sign + (abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 1 : 2), unit: 'B' };
+    if (abs >= 1_000_000)     return { num: sign + (abs / 1_000_000).toFixed(abs >= 10_000_000 ? 1 : 2), unit: 'M' };
+    if (abs >= 1_000)         return { num: sign + (abs / 1_000).toFixed(abs >= 10_000 ? 1 : 2), unit: 'K' };
     return { num: n.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), unit: '' };
   };
 
