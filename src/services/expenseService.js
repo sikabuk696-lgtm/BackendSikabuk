@@ -174,11 +174,24 @@ async function uploadExpenseAttachment(businessId, expenseId, file) {
  * @param {object} filters - Optional filters (startDate, endDate, category)
  * @returns {Promise<object>} - { success, expenses, count, totalAmount }
  */
+async function attachRecorder(expenses) {
+  if (!expenses || expenses.length === 0) return expenses;
+  const userIds = [...new Set(expenses.map(e => e.user_id).filter(Boolean))];
+  if (userIds.length === 0) return expenses;
+  const { data: workers } = await supabase
+    .from('workers')
+    .select('id, worker_name')
+    .in('id', userIds);
+  const workerMap = {};
+  (workers || []).forEach(w => { workerMap[w.id] = w; });
+  return expenses.map(e => ({ ...e, recorder: workerMap[e.user_id] || null }));
+}
+
 async function getExpenses(businessId, filters = {}) {
   try {
     let query = supabase
       .from('expenses')
-      .select('*, recorder:workers!user_id (id, worker_name)', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .order('expense_date', { ascending: false });
 
@@ -207,7 +220,8 @@ async function getExpenses(businessId, filters = {}) {
     // Calculate total amount
     const totalAmount = data.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
 
-    const enrichedExpenses = await attachExpenseProofs(data);
+    const withRecorder = await attachRecorder(data);
+    const enrichedExpenses = await attachExpenseProofs(withRecorder);
 
     return {
       success: true,
@@ -234,7 +248,7 @@ async function getExpenseById(businessId, expenseId) {
   try {
     const { data, error } = await supabase
       .from('expenses')
-      .select('*, recorder:workers!user_id (id, worker_name)')
+      .select('*')
       .eq('id', expenseId)
       .eq('business_id', businessId)
       .single();
@@ -249,7 +263,8 @@ async function getExpenseById(businessId, expenseId) {
       throw error;
     }
 
-    const enrichedExpense = await attachExpenseProof(data);
+    const [withRecorder] = await attachRecorder([data]);
+    const enrichedExpense = await attachExpenseProof(withRecorder);
 
     return {
       success: true,
