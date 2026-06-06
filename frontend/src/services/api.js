@@ -92,8 +92,13 @@ export const expensesAPI = {
   getAll: (params) => api.get('/api/expenses', { params }),
   getByCategory: (params) => api.get('/api/expenses/by-category', { params }),
   getOne: (id) => api.get(`/api/expenses/${id}`),
-  create: (data) => api.post('/api/expenses', data),
-  update: (id, data) => api.put(`/api/expenses/${id}`, data),
+  create: (data) => api.post('/api/expenses', data, {
+    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+  }),
+  update: (id, data) => api.put(`/api/expenses/${id}`, data, {
+    headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+  }),
+  downloadAttachment: (id) => api.get(`/api/expenses/${id}/attachment/download`, { responseType: 'blob' }),
   delete: (id) => api.delete(`/api/expenses/${id}`),
 };
 

@@ -1592,16 +1592,139 @@ img { max-width: 100%; display: block; }
   .expenses-page .data-table tbody td:nth-child(1) { padding: 14px 16px 10px 20px; font-size: 1rem !important; font-weight: 700 !important; color: #111827 !important; }
   .expenses-page .data-table tbody td:nth-child(2),
   .expenses-page .data-table tbody td:nth-child(3),
-  .expenses-page .data-table tbody td:nth-child(4) { display: flex; align-items: baseline; gap: 8px; padding: 3px 16px 3px 20px; font-size: 0.83rem; color: #6B7280 !important; text-align: left !important; }
+  .expenses-page .data-table tbody td:nth-child(4),
+  .expenses-page .data-table tbody td:nth-child(5) { display: flex; align-items: baseline; gap: 8px; padding: 3px 16px 3px 20px; font-size: 0.83rem; color: #6B7280 !important; text-align: left !important; }
   .expenses-page .data-table tbody td:nth-child(2)::before { content: 'Description'; }
   .expenses-page .data-table tbody td:nth-child(3)::before { content: 'Category'; }
   .expenses-page .data-table tbody td:nth-child(4)::before { content: 'Amount'; }
+  .expenses-page .data-table tbody td:nth-child(5)::before { content: 'Proof'; }
   .expenses-page .data-table tbody td:nth-child(2)::before,
   .expenses-page .data-table tbody td:nth-child(3)::before,
-  .expenses-page .data-table tbody td:nth-child(4)::before { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #9CA3AF; flex-shrink: 0; min-width: 76px; }
-  .expenses-page .data-table tbody td:nth-child(4) { padding-bottom: 10px; }
-  .expenses-page .data-table tbody td:nth-child(5) { padding: 10px 16px 12px 20px; border-top: 1px solid #F3F4F6; }
+  .expenses-page .data-table tbody td:nth-child(4)::before,
+  .expenses-page .data-table tbody td:nth-child(5)::before { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #9CA3AF; flex-shrink: 0; min-width: 76px; }
+  .expenses-page .data-table tbody td:nth-child(4),
+  .expenses-page .data-table tbody td:nth-child(5) { padding-bottom: 10px; }
+  .expenses-page .data-table tbody td:nth-child(6) { padding: 10px 16px 12px 20px; border-top: 1px solid #F3F4F6; }
   .expenses-page .action-btns button { width: 36px; height: 36px; font-size: 1rem; }
+
+  .expense-proof-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #0F766E;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .expense-proof-link:hover {
+    color: #115E59;
+  }
+
+  .expense-proof-link-inline {
+    margin-top: 10px;
+  }
+
+  .expense-proof-meta {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #4B5563;
+  }
+
+  .expense-row { cursor: pointer; }
+
+  .expense-link-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .expense-link-btn:hover {
+    color: #0F766E;
+  }
+
+  .expense-proof-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .expense-inline-action {
+    margin-left: 10px;
+    border: 0;
+    background: transparent;
+    color: #0F766E;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .expense-details {
+    display: grid;
+    gap: 20px;
+  }
+
+  .expense-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  .expense-details-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6B7280;
+    margin-bottom: 6px;
+  }
+
+  .expense-details-proof {
+    display: grid;
+    gap: 12px;
+  }
+
+  .expense-details-proof-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .expense-proof-preview-image,
+  .expense-proof-preview-frame {
+    width: 100%;
+    min-height: 420px;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    background: #F9FAFB;
+  }
+
+  .expense-proof-preview-image {
+    object-fit: contain;
+    max-height: 65vh;
+  }
+
+  .expense-proof-file-card,
+  .expense-proof-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #E5E7EB;
+    border-radius: 14px;
+    background: #F9FAFB;
+    color: #4B5563;
+  }
 }
 
 /* ── Small phones (≤ 480px) — all pages ── */
