@@ -21,6 +21,7 @@ const config = {
   supabase: {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_KEY,
+    expenseAttachmentsBucket: process.env.SUPABASE_EXPENSE_ATTACHMENTS_BUCKET || 'expense-proofs',
   },
   
   // JWT Authentication (auto-selects based on NODE_ENV)
