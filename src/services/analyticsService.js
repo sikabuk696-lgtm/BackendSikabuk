@@ -553,7 +553,7 @@ async function getExpenseBreakdown(businessId, startDate = null, endDate = null,
     const breakdown = Object.entries(categoryTotals).map(([category, amount]) => ({
       category,
       amount,
-      percentage: ((amount / totalExpenses) * 100).toFixed(2) + '%'
+      percentage: Number(((amount / totalExpenses) * 100).toFixed(2))
     })).sort((a, b) => b.amount - a.amount);
 
     return {

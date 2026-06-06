@@ -57,17 +57,16 @@ export default function SikaBukLogo({ size = 32, className = '' }) {
         strokeWidth="1.4" strokeLinecap="round"
       />
 
-      {/* ₵ Cedis curve on right page */}
+      {/* ₵ Cedis mark on right page */}
       <path
-        d="M31 12C27.5 12 25 15.5 25 20.5C25 25.5 27.5 29 31 29"
-        stroke="#C8962E" strokeOpacity="0.9"
-        strokeWidth="2.4" strokeLinecap="round" fill="none"
+        d="M31.2 12.4C28.8 12.4 26.7 13.4 25.2 15.2C23.8 16.8 23 18.9 23 21.1C23 23.3 23.8 25.4 25.2 27C26.7 28.8 28.8 29.8 31.2 29.8"
+        stroke="#C8962E" strokeOpacity="0.95"
+        strokeWidth="2.6" strokeLinecap="round" fill="none"
       />
-      {/* ₵ Cedis horizontal stroke */}
       <line
-        x1="23.5" y1="20.5" x2="33" y2="20.5"
-        stroke="#C8962E" strokeOpacity="0.9"
-        strokeWidth="1.8" strokeLinecap="round"
+        x1="27.9" y1="11.2" x2="27.9" y2="31"
+        stroke="#C8962E" strokeOpacity="0.95"
+        strokeWidth="1.9" strokeLinecap="round"
       />
     </svg>
   );

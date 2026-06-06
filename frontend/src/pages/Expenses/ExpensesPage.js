@@ -177,6 +177,7 @@ export default function ExpensesPage() {
                 <th>Date</th>
                 <th>Description</th>
                 <th>Category</th>
+                <th>Recorded By</th>
                 <th className="text-right">Amount</th>
                 <th>Proof</th>
                 <th></th>
@@ -201,6 +202,7 @@ export default function ExpensesPage() {
                   <td>
                     <span className="badge badge-neutral">{exp.category}</span>
                   </td>
+                  <td>{exp.recorder?.worker_name || 'Unknown'}</td>
                   <td className="text-right currency fw-600 text-danger">{formatMoney(exp.amount)}</td>
                   <td>
                     {exp.attachment?.url ? (
@@ -503,6 +505,10 @@ function ExpenseDetailsModal({ expense, onClose, onEdit, onDownloadAttachment })
             <div>
               <span className="expense-details-label">Category</span>
               <strong>{expense.category}</strong>
+            </div>
+            <div>
+              <span className="expense-details-label">Recorded By</span>
+              <strong>{expense.recorder?.worker_name || 'Unknown'}</strong>
             </div>
             <div>
               <span className="expense-details-label">Amount</span>

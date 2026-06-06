@@ -178,7 +178,7 @@ async function getExpenses(businessId, filters = {}) {
   try {
     let query = supabase
       .from('expenses')
-      .select('*', { count: 'exact' })
+      .select('*, recorder:workers!user_id (id, worker_name)', { count: 'exact' })
       .eq('business_id', businessId)
       .order('expense_date', { ascending: false });
 
@@ -234,7 +234,7 @@ async function getExpenseById(businessId, expenseId) {
   try {
     const { data, error } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, recorder:workers!user_id (id, worker_name)')
       .eq('id', expenseId)
       .eq('business_id', businessId)
       .single();

@@ -140,7 +140,18 @@ export default function ReportsPage() {
       : 0
   , [trendData]);
 
+  const cashFlow = useMemo(() =>
+    (salesData?.total_revenue || 0) - totalExpenses
+  , [salesData, totalExpenses]);
+
   const netProfit = salesData ? (salesData.total_profit - totalExpenses) : 0;
+  const getStatusMeta = (value, positiveText, negativeText) => {
+    if (value > 0) return { label: positiveText, tone: 'positive' };
+    if (value < 0) return { label: negativeText, tone: 'negative' };
+    return { label: 'Break-even', tone: 'neutral' };
+  };
+  const netProfitStatus = getStatusMeta(netProfit, 'Profitable', 'Running at a loss');
+  const cashFlowStatus = getStatusMeta(cashFlow, 'Cash surplus', 'Cash deficit');
   const activeShopName = activeLocationId
     ? (locations.find(l => l.id === activeLocationId)?.name || 'Shop')
     : 'All Shops';
@@ -274,6 +285,7 @@ export default function ReportsPage() {
             <div className="kpi-card highlight net">
               <div className="kpi-card-top">
                 <span className="kpi-label">Net Profit</span>
+                <span className={`kpi-status ${netProfitStatus.tone}`}>{netProfitStatus.label}</span>
               </div>
               <div className="kpi-amount">
                 <span className="sym">{symbol}</span>
@@ -287,6 +299,20 @@ export default function ReportsPage() {
 
           {/* Sales Summary mini row */}
           <div className="report-row" style={{ marginBottom: 24 }}>
+            {(() => { const p = kpiParts(cashFlow); return (
+            <div className="kpi-card cashflow report-cashflow-card">
+              <div className="kpi-card-top">
+                <span className="kpi-label">Cash Flow</span>
+                <span className={`kpi-status ${cashFlowStatus.tone}`}>{cashFlowStatus.label}</span>
+              </div>
+              <div className="kpi-amount">
+                <span className="sym">{symbol}</span>
+                <span className={`num ${p.sizeClass}`}>{p.num}</span>
+                {p.unit && <span className="unit">{p.unit}</span>}
+              </div>
+              <span className="kpi-sub">Revenue &minus; Expenses</span>
+            </div>); })()}
+
             <div className="card report-summary-card">
               <h3>Sales Summary</h3>
               <div className="summary-grid">
