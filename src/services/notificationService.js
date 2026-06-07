@@ -92,7 +92,7 @@ async function createNotification(
   type, title, message, entityType, entityId = null
 ) {
   try {
-    await supabase.from('notifications').insert({
+    const { error: insertErr } = await supabase.from('notifications').insert({
       business_id: businessId,
       actor_id:    actorId,
       actor_name:  actorName,
@@ -104,8 +104,11 @@ async function createNotification(
       entity_id:   entityId || null,
       read_by:     [],
     });
+    if (insertErr) {
+      console.error('[createNotification] Insert failed:', insertErr.message, insertErr);
+    }
   } catch (err) {
-    console.error('[createNotification] Failed silently:', err?.message || err);
+    console.error('[createNotification] Unexpected error:', err?.message || err);
   }
 }
 
