@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const costHistoryService = require('./costHistoryService');
 
 /**
  * Product Service
@@ -171,6 +172,22 @@ async function createProduct(businessId, workerId, productData) {
 
     if (error) throw error;
 
+    // Record the initial cost price in the cost history ledger
+    await costHistoryService.logCostChange({
+      businessId,
+      productId: data.id,
+      locationId: data.location_id || null,
+      changeType: 'create',
+      previousCostPrice: null,
+      newCostPrice: parsedCost,
+      quantityAdded: parsedQty,
+      quantityAfter: data.quantity,
+      supplier: productData.supplier,
+      note: 'Initial stock',
+      changedBy: workerId,
+      changedByName: productData._workerName,
+    });
+
     return {
       success: true,
       product: data
@@ -246,6 +263,22 @@ async function updateProduct(businessId, workerId, productId, updates) {
 
       if (error) throw error;
 
+      // Log cost price change (manual edit)
+      if (updateData.cost_price !== undefined &&
+          parseFloat(updateData.cost_price) !== parseFloat(existingProduct.product.cost_price)) {
+        await costHistoryService.logCostChange({
+          businessId,
+          productId,
+          locationId: data.location_id || null,
+          changeType: 'update',
+          previousCostPrice: existingProduct.product.cost_price,
+          newCostPrice: updateData.cost_price,
+          quantityAdded: 0,
+          quantityAfter: data.quantity,
+          changedBy: workerId,
+        });
+      }
+
       return {
         success: true,
         product: data
@@ -262,6 +295,23 @@ async function updateProduct(businessId, workerId, productId, updates) {
           .select()
           .single();
         if (err2) throw err2;
+
+        // Log cost price change (fallback path without updated_by)
+        if (updateData.cost_price !== undefined &&
+            parseFloat(updateData.cost_price) !== parseFloat(existingProduct.product.cost_price)) {
+          await costHistoryService.logCostChange({
+            businessId,
+            productId,
+            locationId: data2.location_id || null,
+            changeType: 'update',
+            previousCostPrice: existingProduct.product.cost_price,
+            newCostPrice: updateData.cost_price,
+            quantityAdded: 0,
+            quantityAfter: data2.quantity,
+            changedBy: workerId,
+          });
+        }
+
         return { success: true, product: data2 };
       }
       throw err;
@@ -423,6 +473,93 @@ async function adjustProductQuantity(businessId, workerId, productId, quantityCh
   }
 }
 
+/**
+ * Restock a product — a new shipment of goods arrived.
+ * Adds quantity and updates the cost price to the latest unit cost,
+ * recording everything in the cost history ledger.
+ * @param {string} businessId - UUID of the business
+ * @param {string} workerId - UUID of the worker recording the restock
+ * @param {string} productId - UUID of the product
+ * @param {object} restock - { quantity_added, unit_cost, supplier?, note? }
+ * @returns {Promise<object>} - { success, product }
+ */
+async function restockProduct(businessId, workerId, productId, restock, workerName = null) {
+  try {
+    const existingProduct = await getProductById(businessId, productId);
+    if (!existingProduct.success) {
+      return existingProduct;
+    }
+
+    const qtyAdded = parseInt(restock.quantity_added, 10);
+    const unitCost = parseFloat(restock.unit_cost);
+
+    if (!Number.isFinite(qtyAdded) || qtyAdded <= 0) {
+      return { success: false, error: 'Quantity added must be a positive integer' };
+    }
+    if (!Number.isFinite(unitCost) || unitCost < 0) {
+      return { success: false, error: 'Unit cost must be a valid non-negative number' };
+    }
+
+    const product = existingProduct.product;
+    const newQuantity = parseInt(product.quantity, 10) + qtyAdded;
+
+    const updatePayload = {
+      quantity: newQuantity,
+      cost_price: unitCost,
+      updated_by: workerId,
+    };
+
+    let updated;
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update(updatePayload)
+        .eq('id', productId)
+        .eq('business_id', businessId)
+        .select()
+        .single();
+      if (error) throw error;
+      updated = data;
+    } catch (err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      if (/column .* does not exist/i.test(msg) || msg.includes("Could not find the 'updated_by' column")) {
+        const { data: data2, error: err2 } = await supabase
+          .from('products')
+          .update({ quantity: newQuantity, cost_price: unitCost })
+          .eq('id', productId)
+          .eq('business_id', businessId)
+          .select()
+          .single();
+        if (err2) throw err2;
+        updated = data2;
+      } else {
+        throw err;
+      }
+    }
+
+    // Record the procurement in the cost history ledger
+    await costHistoryService.logCostChange({
+      businessId,
+      productId,
+      locationId: updated.location_id || product.location_id || null,
+      changeType: 'restock',
+      previousCostPrice: product.cost_price,
+      newCostPrice: unitCost,
+      quantityAdded: qtyAdded,
+      quantityAfter: newQuantity,
+      supplier: restock.supplier,
+      note: restock.note,
+      changedBy: workerId,
+      changedByName: workerName,
+    });
+
+    return { success: true, product: updated };
+  } catch (error) {
+    console.error('Error restocking product:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 module.exports = {
   getProducts,
   getProductById,
@@ -430,5 +567,6 @@ module.exports = {
   updateProduct,
   deleteProduct,
   getLowStockProducts,
-  adjustProductQuantity
+  adjustProductQuantity,
+  restockProduct
 };

@@ -114,6 +114,10 @@ async function approveChange(businessId, ownerId, changeId) {
       result = await productService.adjustProductQuantity(
         businessId, ownerId, change.entity_id, change.payload.change
       );
+    } else if (change.action === 'restock') {
+      result = await productService.restockProduct(
+        businessId, ownerId, change.entity_id, change.payload, change.worker_name || null
+      );
     } else if (change.action === 'delete') {
       result = await productService.deleteProduct(businessId, change.entity_id);
     }

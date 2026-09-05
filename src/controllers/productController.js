@@ -1,4 +1,5 @@
 const productService = require('../services/productService');
+const costHistoryService = require('../services/costHistoryService');
 const pendingService = require('../services/pendingService');
 const { createNotification } = require('../services/notificationService');
 
@@ -142,7 +143,7 @@ async function createProduct(req, res) {
       });
     }
 
-    const result = await productService.createProduct(businessId, workerId, productData);
+    const result = await productService.createProduct(businessId, workerId, { ...productData, _workerName: req.workerName });
     if (!result.success) return res.status(400).json({ success: false, error: result.error });
     await createNotification(
       req.businessId, req.workerId, req.workerName, req.role,
@@ -322,6 +323,116 @@ async function adjustQuantity(req, res) {
   }
 }
 
+/**
+ * POST /api/products/:id/restock
+ * Record a new shipment of goods: adds stock and updates cost price,
+ * logging the procurement in the cost history ledger.
+ * Workers → pending approval. Owners → applied directly.
+ */
+async function restock(req, res) {
+  try {
+    const businessId = req.businessId;
+    const workerId   = req.workerId;
+    const role       = req.role;
+    const { id }     = req.params;
+    const { quantity_added, unit_cost, supplier, note } = req.body;
+
+    if (quantity_added === undefined || unit_cost === undefined) {
+      return res.status(400).json({ success: false, error: 'quantity_added and unit_cost are required' });
+    }
+
+    if (!['owner', 'cofounder'].includes(role)) {
+      const current = await productService.getProductById(businessId, id);
+      const result = await pendingService.createPendingChange({
+        businessId,
+        workerId,
+        workerName:  req.workerName,
+        entityType:  'product',
+        action:      'restock',
+        entityId:    id,
+        entityName:  current.product?.name || id,
+        payload:     {
+          quantity_added: parseInt(quantity_added, 10),
+          unit_cost:      parseFloat(unit_cost),
+          supplier:       supplier || null,
+          note:           note || null,
+          previous_quantity: current.product?.quantity ?? 0,
+          previous_cost_price: current.product?.cost_price ?? 0,
+        },
+      });
+      await createNotification(
+        businessId, workerId, req.workerName, role,
+        'product_pending',
+        'Restock Awaiting Approval',
+        `${req.workerName} submitted a restock for '${current.product?.name || 'a product'}' — pending approval`,
+        'product', id
+      );
+      return res.status(202).json({
+        success: true,
+        pending: true,
+        change:  result.change,
+        message: 'Restock submitted for owner approval',
+      });
+    }
+
+    const result = await productService.restockProduct(
+      businessId, workerId, id,
+      { quantity_added, unit_cost, supplier, note },
+      req.workerName
+    );
+    if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    await createNotification(
+      req.businessId, req.workerId, req.workerName, req.role,
+      'product_restocked',
+      'Product Restocked',
+      `${req.workerName} restocked '${result.product.name}' (+${parseInt(quantity_added, 10)} units)`,
+      'product', result.product.id
+    );
+    return res.status(200).json({ success: true, product: result.product, message: 'Product restocked successfully' });
+  } catch (error) {
+    console.error('Error in restock:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}
+
+/**
+ * GET /api/products/:id/cost-history
+ * Cost price history + procurement stats for a single product.
+ */
+async function getCostHistory(req, res) {
+  try {
+    const businessId = req.businessId;
+    const { id } = req.params;
+
+    const result = await costHistoryService.getProductHistory(businessId, id);
+    if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    return res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in getCostHistory:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}
+
+/**
+ * GET /api/products/cost-history/summary
+ * Business-wide procurement summary (total spend, per-product breakdown).
+ */
+async function getCostSummary(req, res) {
+  try {
+    const businessId = req.businessId;
+    const { locationId, productId, startDate, endDate } = req.query;
+
+    const result = await costHistoryService.getProcurementSummary(businessId, {
+      locationId, productId, startDate, endDate,
+    });
+    if (!result.success) return res.status(400).json({ success: false, error: result.error });
+    return res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error('Error in getCostSummary:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}
+
 module.exports = {
   getAllProducts,
   getLowStock,
@@ -329,5 +440,8 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
-  adjustQuantity
+  adjustQuantity,
+  restock,
+  getCostHistory,
+  getCostSummary
 };
